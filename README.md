@@ -1,4 +1,3 @@
-# Real-Time-Traffic-Prediction-System
 # 🚗 Real-Time Traffic Prediction System
 
 A comprehensive data science project that predicts traffic congestion levels using machine learning and deep learning models with real-time visualization.
