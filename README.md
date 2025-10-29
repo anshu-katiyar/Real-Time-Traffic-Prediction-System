@@ -5,7 +5,7 @@ A comprehensive data science project that predicts traffic congestion levels usi
 ## 🎯 Features
 
 - **Real-time traffic data collection** from Google Maps and weather APIs
-- **Multiple ML models**: Random Forest, Gradient Boosting, Logistic Regression, LSTM
+- **Multiple ML models**: Random Forest, Gradient Boosting, Logistic Regression
 - **Interactive dashboard** with live traffic map and predictions
 - **Weather impact analysis** on traffic patterns
 - **Time-series forecasting** for traffic congestion
@@ -74,7 +74,7 @@ python main.py --mode dashboard
 | **Random Forest** | Ensemble | Feature importance analysis |
 | **Gradient Boosting** | Ensemble | High accuracy predictions |
 | **Logistic Regression** | Linear | Baseline model |
-| **LSTM** | Deep Learning | Time-series forecasting |
+| **SVM** | Support Vector | Classification baseline |
 
 ## 📁 Project Structure
 

@@ -4,9 +4,10 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+# TensorFlow removed for deployment compatibility
+# import tensorflow as tf
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense, Dropout
 import joblib
 
 class TrafficPredictionModels:
@@ -149,13 +150,13 @@ class TrafficPredictionModels:
         lr_accuracy = self.evaluate_model(lr_model, X_test, y_test, 'logistic_regression')
         results['logistic_regression'] = lr_accuracy
         
-        # Train LSTM model if enough data
-        if len(X_train) > 50:
-            print("\nTraining LSTM...")
-            lstm_model, history = self.train_lstm(X_train, y_train, epochs=30)
-            if lstm_model:
-                lstm_accuracy = self.evaluate_model(lstm_model, X_test, y_test, 'lstm')
-                results['lstm'] = lstm_accuracy
+        # LSTM removed for deployment compatibility
+        # if len(X_train) > 50:
+        #     print("\nTraining LSTM...")
+        #     lstm_model, history = self.train_lstm(X_train, y_train, epochs=30)
+        #     if lstm_model:
+        #         lstm_accuracy = self.evaluate_model(lstm_model, X_test, y_test, 'lstm')
+        #         results['lstm'] = lstm_accuracy
         
         # Find best model
         self.best_model = max(results, key=results.get)
@@ -210,7 +211,8 @@ class TrafficPredictionModels:
         
         for model_name in metadata['available_models']:
             if model_name == 'lstm':
-                self.models[model_name] = tf.keras.models.load_model(f'{filepath_prefix}_{model_name}.h5')
+                # Skip LSTM for deployment
+                continue
             else:
                 self.models[model_name] = joblib.load(f'{filepath_prefix}_{model_name}.pkl')
 
