@@ -245,48 +245,174 @@ class TrafficDashboard:
             st.session_state.traffic_data = self.collector.generate_sample_data(1000)
         return st.session_state.traffic_data
     
-    def create_traffic_map(self, df):
-        """Create interactive traffic map"""
+    def get_directions(self, start, destination, mode):
+        """Get directions between two points"""
+        try:
+            # Simulate directions API call
+            distances = {"Driving": "15.2 km", "Walking": "12.8 km", "Transit": "18.5 km", "Bicycling": "14.1 km"}
+            durations = {"Driving": "25 mins", "Walking": "2h 15m", "Transit": "45 mins", "Bicycling": "55 mins"}
+            traffic_durations = {"Driving": "32 mins", "Walking": "2h 15m", "Transit": "50 mins", "Bicycling": "55 mins"}
+            
+            return {
+                'distance': distances[mode],
+                'duration': durations[mode],
+                'traffic_duration': traffic_durations[mode]
+            }
+        except:
+            return None
+    
+    def create_enhanced_traffic_map(self, df, map_type, layers, show_labels, globe_view, start_point=None, destination=None):
+        """Create enhanced interactive traffic map with Google Maps features"""
         # Create base map
         center_lat = df['lat'].mean()
         center_lon = df['lon'].mean()
         
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=11)
+        # Map tiles based on type
+        tile_options = {
+            "Default": "OpenStreetMap",
+            "Satellite": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            "Terrain": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}"
+        }
         
-        # Color mapping for congestion levels
-        colors = {0: 'green', 1: 'lightgreen', 2: 'yellow', 3: 'orange', 4: 'red'}
+        tile_attr = {
+            "Default": "OpenStreetMap",
+            "Satellite": "Esri World Imagery",
+            "Terrain": "Esri World Terrain"
+        }
         
-        # Add markers for each traffic point
-        for idx, row in df.iterrows():
-            folium.CircleMarker(
-                location=[row['lat'], row['lon']],
-                radius=8,
-                popup=f"Congestion: {CONGESTION_LEVELS[row['congestion_level']]}<br>"
-                      f"Speed: {row['average_speed']:.1f} km/h<br>"
-                      f"Time: {row['timestamp']}",
-                color=colors[row['congestion_level']],
-                fill=True,
-                fillColor=colors[row['congestion_level']],
-                fillOpacity=0.7
+        m = folium.Map(
+            location=[center_lat, center_lon], 
+            zoom_start=12 if not globe_view else 8,
+            tiles=tile_options[map_type],
+            attr=tile_attr[map_type],
+            prefer_canvas=True
+        )
+        
+        # Add layer controls
+        if "Traffic" in layers:
+            # Traffic layer (our congestion data)
+            colors = {0: 'green', 1: 'lightgreen', 2: 'yellow', 3: 'orange', 4: 'red'}
+            
+            for idx, row in df.head(25).iterrows():
+                popup_text = f"<b>Congestion:</b> {CONGESTION_LEVELS[row['congestion_level']]}<br>"
+                popup_text += f"<b>Speed:</b> {row['average_speed']:.1f} km/h<br>"
+                popup_text += f"<b>Time:</b> {row['timestamp'].strftime('%H:%M')}"
+                
+                if show_labels:
+                    popup_text += f"<br><b>Location:</b> {row['lat']:.3f}, {row['lon']:.3f}"
+                
+                folium.CircleMarker(
+                    location=[row['lat'], row['lon']],
+                    radius=6,
+                    popup=folium.Popup(popup_text, max_width=250),
+                    color=colors[row['congestion_level']],
+                    fill=True,
+                    fillColor=colors[row['congestion_level']],
+                    fillOpacity=0.8,
+                    weight=2
+                ).add_to(m)
+        
+        if "Transit" in layers:
+            # Add transit stations (simulated)
+            transit_stations = [
+                [center_lat + 0.01, center_lon + 0.01, "Metro Station A"],
+                [center_lat - 0.01, center_lon - 0.01, "Bus Stop B"],
+                [center_lat + 0.005, center_lon - 0.005, "Railway Station C"]
+            ]
+            
+            for lat, lon, name in transit_stations:
+                folium.Marker(
+                    [lat, lon],
+                    popup=f"🚇 {name}",
+                    icon=folium.Icon(color='blue', icon='train')
+                ).add_to(m)
+        
+        if "Biking" in layers:
+            # Add bike lanes (simulated)
+            bike_route = [
+                [center_lat, center_lon],
+                [center_lat + 0.005, center_lon + 0.005],
+                [center_lat + 0.01, center_lon + 0.008]
+            ]
+            
+            folium.PolyLine(
+                bike_route,
+                color='green',
+                weight=3,
+                opacity=0.8,
+                popup="🚴 Bike Lane"
             ).add_to(m)
         
-        # Add legend
-        legend_html = '''
+        if "Street View" in layers:
+            # Add street view markers
+            folium.Marker(
+                [center_lat, center_lon],
+                popup="📷 Street View Available",
+                icon=folium.Icon(color='orange', icon='camera')
+            ).add_to(m)
+        
+        # Add directions route if both points provided
+        if start_point and destination:
+            try:
+                # Simulate route (in real implementation, use Google Directions API)
+                route_coords = [
+                    [center_lat - 0.01, center_lon - 0.01],  # Start
+                    [center_lat - 0.005, center_lon],
+                    [center_lat, center_lon + 0.005],
+                    [center_lat + 0.01, center_lon + 0.01]   # End
+                ]
+                
+                folium.PolyLine(
+                    route_coords,
+                    color='blue',
+                    weight=5,
+                    opacity=0.8,
+                    popup="🗺️ Suggested Route"
+                ).add_to(m)
+                
+                # Add start and end markers
+                folium.Marker(
+                    route_coords[0],
+                    popup=f"🚩 Start: {start_point}",
+                    icon=folium.Icon(color='green', icon='play')
+                ).add_to(m)
+                
+                folium.Marker(
+                    route_coords[-1],
+                    popup=f"🏁 Destination: {destination}",
+                    icon=folium.Icon(color='red', icon='stop')
+                ).add_to(m)
+            except:
+                pass
+        
+        # Add layer control
+        folium.LayerControl().add_to(m)
+        
+        # Add enhanced legend
+        legend_html = f'''
         <div style="position: fixed; 
-                    bottom: 50px; left: 50px; width: 150px; height: 120px; 
+                    bottom: 50px; left: 50px; width: 180px; height: 160px; 
                     background-color: white; border:2px solid grey; z-index:9999; 
-                    font-size:14px; padding: 10px">
-        <p><b>Traffic Levels</b></p>
+                    font-size:12px; padding: 10px; border-radius: 5px;">
+        <p><b>🚦 Traffic Levels</b></p>
         <p><i class="fa fa-circle" style="color:green"></i> Free Flow</p>
         <p><i class="fa fa-circle" style="color:lightgreen"></i> Light Traffic</p>
         <p><i class="fa fa-circle" style="color:yellow"></i> Moderate Traffic</p>
         <p><i class="fa fa-circle" style="color:orange"></i> Heavy Traffic</p>
         <p><i class="fa fa-circle" style="color:red"></i> Severe Congestion</p>
+        <hr>
+        <p><b>🗺️ Map Tools</b></p>
+        <p>🚇 Transit | 🚴 Bike Lanes</p>
+        <p>📷 Street View | 🗺️ Directions</p>
         </div>
         '''
         m.get_root().html.add_child(folium.Element(legend_html))
         
         return m
+    
+    def create_traffic_map(self, df):
+        """Legacy method - calls enhanced map with default settings"""
+        return self.create_enhanced_traffic_map(df, "Default", ["Traffic"], True, False)
     
     def create_time_series_plot(self, df):
         """Create time series plot of traffic patterns"""
@@ -456,19 +582,64 @@ class TrafficDashboard:
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.subheader(f"Live Traffic Map - {selected_district}, {selected_state}")
+            st.subheader(f"🗺️ Live Traffic Map - {selected_district}, {selected_state}")
             
-            # Create and display map with smooth updates
+            # Map Controls
+            map_col1, map_col2, map_col3 = st.columns(3)
+            
+            with map_col1:
+                map_type = st.selectbox("Map Type", ["Default", "Satellite", "Terrain"], key="map_type")
+                show_labels = st.checkbox("Show Labels", value=True, key="labels")
+            
+            with map_col2:
+                map_layers = st.multiselect("Map Layers", 
+                    ["Traffic", "Transit", "Biking", "Street View"], 
+                    default=["Traffic"], key="layers")
+            
+            with map_col3:
+                globe_view = st.checkbox("Globe View", key="globe")
+                show_travel_time = st.checkbox("Travel Time Tool", key="travel_time")
+            
+            # Directions Section
+            st.subheader("🧭 Directions")
+            dir_col1, dir_col2, dir_col3 = st.columns(3)
+            
+            with dir_col1:
+                start_point = st.text_input("Starting Point", placeholder="Enter address or coordinates", key="start")
+            
+            with dir_col2:
+                destination = st.text_input("Destination", placeholder="Enter address or coordinates", key="dest")
+            
+            with dir_col3:
+                travel_mode = st.selectbox("Travel Mode", ["Driving", "Walking", "Transit", "Bicycling"], key="mode")
+            
+            if st.button("Get Directions", key="directions_btn"):
+                if start_point and destination:
+                    directions_info = self.get_directions(start_point, destination, travel_mode)
+                    if directions_info:
+                        st.success(f"🛣️ Route found! Distance: {directions_info['distance']}, Duration: {directions_info['duration']}")
+                        if show_travel_time:
+                            st.info(f"⏱️ Estimated travel time: {directions_info['duration']} (Current traffic: {directions_info['traffic_duration']})")
+                else:
+                    st.warning("Please enter both starting point and destination")
+            
+            # Create and display enhanced map
             map_container = st.container()
             with map_container:
-                traffic_map = self.create_traffic_map(df)
+                traffic_map = self.create_enhanced_traffic_map(df, map_type, map_layers, show_labels, globe_view, start_point, destination)
                 map_data = st_folium(
                     traffic_map, 
                     width=700, 
-                    height=500,
-                    returned_objects=[],
-                    key=f"traffic_map_{selected_country}_{selected_state}_{selected_district}"
+                    height=600,
+                    returned_objects=["last_object_clicked"],
+                    key=f"enhanced_map_{selected_country}_{selected_state}_{selected_district}"
                 )
+                
+                # Display clicked location info
+                if map_data['last_object_clicked']:
+                    clicked_data = map_data['last_object_clicked']
+                    if clicked_data:
+                        st.info(f"📍 Clicked Location: Lat {clicked_data['lat']:.4f}, Lon {clicked_data['lng']:.4f}")
             
             # Location statistics
             st.subheader("Location Statistics")
